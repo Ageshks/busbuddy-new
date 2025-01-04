@@ -1,49 +1,53 @@
 package com.agesh.busbuddy.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.agesh.busbuddy.dto.UserDto;
 import com.agesh.busbuddy.service.UserService;
 
-import ch.qos.logback.core.model.Model;
-import ch.qos.logback.core.dto.userDto;
-
-
-
-@Controller
+@RestController
+@RequestMapping("/api/users")
+@CrossOrigin(origins = "*")
 public class UserController {
+
     @Autowired
     private UserService userService;
 
-    @PostMapping("/registration")
-    public String registerUser(@ModelAttribute UserDto userDto) {
-        userService.saveUser(userDto);
-        return "redirect:/login";
-    }
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
-    @GetMapping("/login")
-    public String loginPage() {
-        return "login";
+    @PostMapping("/register")
+    public String registerUser(@RequestBody UserDto userDto) {
+        try {
+            userService.registerUser(userDto);
+            return "User registered successfully!";
+        } catch (Exception e) {
+            return "Error: " + e.getMessage();
+        }
     }
 
     @PostMapping("/login")
-    public String authenticateUser(@RequestParam String email, @RequestParam String password) {
-        if (userService.authenticate(email, password)) {
-            return "redirect:/user-dashboard";
+    public String loginUser(@RequestParam("email") String email, @RequestParam("password") String password) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, password)
+            );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            return "Login successful!";
+        } catch (Exception e) {
+            return "Invalid email or password.";
         }
-        return "login";
     }
-
-    @GetMapping("/super-admin-page")
-    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
-    public String superAdminPage(Model model) {
-        model.addAttribute("users", userService.getAllUsers());
-        return "super-admin";
-    }
-
-    // Add other mappings for roles like admin and user page
 }
-
